@@ -1,0 +1,38 @@
+/* Dense, readable schedule ledgers for daily order review. */
+.portfolio-toolbar { align-items: center; }
+.orders-toolbar { align-items: center; }
+.orders-toolbar label { display: flex; align-items: center; gap: 8px; color: var(--muted); white-space: nowrap; font-size: 13px; }
+.orders-toolbar select { width: auto; min-width: 128px; font-size: 13px; }
+.portfolio-toolbar label { display: flex; align-items: center; gap: 8px; color: var(--muted); white-space: nowrap; font-size: 13px; }
+.portfolio-toolbar select { width: auto; min-width: 128px; font-size: 13px; }
+.portfolio-export-note { margin: -7px 0 14px; }
+.project-ledger-head { padding-bottom: 10px; }
+.project-scan { display: grid; grid-template-columns: minmax(190px, 1.1fr) minmax(180px, 1fr) minmax(180px, 1fr); gap: 0; margin: 0 20px 10px; border: 1px solid var(--line); }
+.project-scan > div { min-width: 0; padding: 9px 12px; }
+.project-scan > div + div { border-left: 1px solid var(--line); }
+.project-scan span, .project-scan small { display: block; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.project-scan strong { display: block; margin-top: 3px; font-size: 13px; font-weight: 690; line-height: 1.45; overflow-wrap: anywhere; }
+.project-scan .is-late, .order-forecast .is-late { color: var(--red); font-weight: 650; }
+.project-ledger-details > summary { padding: 8px 20px 12px; color: var(--teal); font-size: 13px; font-weight: 650; cursor: pointer; list-style: none; }
+.project-ledger-details > summary::-webkit-details-marker { display: none; }
+.project-ledger-details > summary::before { content: '▸'; display: inline-block; margin-right: 7px; transition: transform .15s ease; }
+.project-ledger-details[open] > summary::before { transform: rotate(90deg); }
+.project-ledger-details > summary:hover { text-decoration: underline; text-underline-offset: 3px; }
+.portfolio-pages { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 13px 20px; color: var(--muted); font-size: 13px; }
+.portfolio-pages:empty { display: none; }
+.order-scan-table { min-width: 1010px; }
+.order-scan-table th:nth-child(1) { min-width: 170px; }
+.order-scan-table th:nth-child(2) { min-width: 130px; }
+.order-scan-table th:nth-child(3) { min-width: 145px; }
+.order-scan-table th:nth-child(4) { min-width: 125px; }
+.order-scan-table th:nth-child(5) { min-width: 200px; }
+.order-scan-table td { vertical-align: top; }
+.order-dates span { display: block; color: var(--muted); white-space: nowrap; }
+.order-dates strong { color: var(--ink); font-weight: 660; font-variant-numeric: tabular-nums; }
+.order-forecast > strong { font-variant-numeric: tabular-nums; }
+.order-scan-table .sub { white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 900px) {
+  .project-scan { grid-template-columns: 1fr; margin: 0 14px 7px; }
+  .project-scan > div + div { border-left: 0; border-top: 1px solid var(--line); }
+  .project-ledger-details > summary { padding-left: 14px; padding-right: 14px; }
+}

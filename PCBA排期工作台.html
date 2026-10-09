@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PCBA 生产排期工作台</title>
+<style>
+  :root{
+    --bg:#F4F6FA; --card:#FFFFFF; --line:#E3E8F0; --text:#1f2733; --muted:#6b7686;
+    --blue:#185FA5; --blue50:#E6F1FB; --amber:#BA7517; --amber50:#FAEEDA;
+    --green:#3B6D11; --green50:#EAF3DE; --red:#A32D2D; --gray:#888780;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;
+    background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;}
+  .wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px;}
+  header h1{font-size:20px;margin:0 0 4px;font-weight:600;}
+  header p{margin:0;color:var(--muted);font-size:13px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;margin-top:16px;box-shadow:0 1px 2px rgba(20,40,80,.04);}
+  .card h2{font-size:14px;margin:0 0 12px;font-weight:600;color:var(--blue);
+    display:flex;align-items:center;gap:8px;}
+  .card h2 .tag{font-size:11px;font-weight:400;color:var(--muted);}
+  .row{display:flex;flex-wrap:wrap;gap:14px;}
+  .field{flex:1;min-width:160px;}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  input,select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;
+    font-size:14px;background:#fff;color:var(--text);font-family:inherit;}
+  input:focus,select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px var(--blue50);}
+  .btn{border:1px solid var(--line);background:#fff;color:var(--text);padding:8px 14px;
+    border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit;white-space:nowrap;}
+  .btn:hover{border-color:var(--blue);color:var(--blue);}
+  .btn-primary{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .btn-primary:hover{background:#0C447C;color:#fff;}
+  .btn-sm{padding:4px 8px;font-size:12px;}
+  .btn-amber{background:var(--amber50);border-color:var(--amber);color:#854F0B;}
+  .btn-amber:hover{background:#FAC775;color:#412402;}
+  .btn-green{background:var(--green50);border-color:var(--green);color:var(--green);}
+  .btn-green:hover{background:#D6E8C2;color:var(--green);}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;align-items:center;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:8px 6px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle;}
+  th{font-size:12px;color:var(--muted);font-weight:500;}
+  td input,td select{padding:6px 8px;font-size:13px;}
+  .idx{width:28px;text-align:center;color:var(--muted);}
+  .ms-badge{display:inline-block;background:var(--amber50);color:#854F0B;border:1px solid var(--amber);
+    border-radius:6px;font-size:11px;padding:1px 6px;}
+  .op{display:flex;gap:4px;}
+  .op button{border:1px solid var(--line);background:#fff;border-radius:6px;cursor:pointer;
+    width:26px;height:26px;font-size:13px;color:var(--muted);line-height:1;}
+  .op button:hover{border-color:var(--blue);color:var(--blue);}
+  .op .del:hover{border-color:var(--red);color:var(--red);}
+  .calc{color:var(--blue);font-weight:500;font-variant-numeric:tabular-nums;}
+  .result{display:flex;flex-wrap:wrap;gap:20px;align-items:center;}
+  .result .big{font-size:30px;font-weight:600;color:var(--blue);font-variant-numeric:tabular-nums;}
+  .result .sub{font-size:13px;color:var(--muted);}
+  .result .pill{background:var(--green50);color:var(--green);border:1px solid var(--green);
+    border-radius:20px;padding:4px 14px;font-size:13px;font-weight:500;}
+  .gantt{overflow-x:auto;padding-bottom:6px;}
+  .gantt-grid{position:relative;min-width:720px;}
+  .gantt-axis{position:relative;height:22px;border-bottom:1px solid var(--line);margin-bottom:6px;margin-left:150px;}
+  .gantt-tick{position:absolute;top:0;font-size:10px;color:var(--muted);transform:translateX(-50%);white-space:nowrap;}
+  .gantt-tick::before{content:"";position:absolute;top:18px;left:50%;width:1px;height:6px;background:var(--line);}
+  .gantt-bars{position:relative;margin-left:150px;}
+  .gbar-row{position:relative;height:26px;margin-bottom:5px;}
+  .gbar-label{position:absolute;left:-150px;top:3px;width:144px;font-size:11px;color:var(--text);z-index:3;
+    background:rgba(255,255,255,.85);padding-right:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;}
+  .gbar{position:absolute;top:4px;height:18px;border-radius:5px;min-width:3px;}
+  .gbar.normal{background:var(--blue);}
+  .gbar.ms{background:var(--amber);}
+  .gbar.ms::after{content:"";position:absolute;right:-5px;top:50%;transform:translateY(-50%) rotate(45deg);
+    width:9px;height:9px;background:var(--amber);border-radius:1px;}
+  .gbar.done{background:var(--green) !important;}
+  .gbar.done::before{content:"✓";position:absolute;left:4px;top:0;font-size:12px;color:#fff;font-weight:700;}
+  .diff-early{color:var(--green);font-weight:600;}
+  .diff-late{color:var(--red);font-weight:600;}
+  .diff-ontime{color:var(--muted);}
+  .gantt-view-switch{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;}
+  .gantt-view-switch .btn.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .swatch{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle;}
+  .ov-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .ov-table th,.ov-table td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;}
+  .ov-table th{font-size:12px;color:var(--muted);font-weight:500;}
+  .ov-table tr{cursor:pointer;}
+  .ov-table tr:hover{background:var(--blue50);}
+  .ov-table tr.active{background:var(--blue50);}
+  .hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6;}
+  .hint b{color:var(--text);font-weight:600;}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1f2733;color:#fff;
+    padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:50;}
+  .toast.show{opacity:1;}
+  .sep{border-top:1px dashed var(--line);margin:14px 0 4px;}
+  @media(max-width:640px){.field{min-width:120px;}.gbar-label{max-width:90px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>PCBA 生产排期工作台</h1>
+    <p>多产品并行排期 · 负责人到人 · 订单数量管理 · 填实际到料日期自动顺延 · 实时算出成品交货日期</p>
+  </header>
+
+  <div class="card">
+    <h2>产品管理 <span class="tag">可切换多个产品 · 各自独立排期</span></h2>
+    <div class="toolbar" style="margin-bottom:12px;">
+      <label style="font-size:12px;color:var(--muted);margin:0;">当前产品：</label>
+      <select id="productSelect" style="width:auto;min-width:220px;"></select>
+      <button class="btn btn-sm btn-primary" id="addProduct">+ 新增产品</button>
+      <button class="btn btn-sm" id="renameProduct">重命名</button>
+      <button class="btn btn-sm" id="delProduct">删除</button>
+    </div>
+    <div class="row">
+      <div class="field" style="min-width:200px;">
+        <label>产品名称</label>
+        <input id="product" type="text" placeholder="如：智能手表主板 V2">
+      </div>
+      <div class="field" style="max-width:160px;">
+        <label>业务负责人</label>
+        <input id="owner" type="text" placeholder="如：张三（业务）">
+      </div>
+      <div class="field" style="max-width:140px;">
+        <label>订单数量</label>
+        <input id="qty" type="number" min="0" step="1" placeholder="如：5000">
+      </div>
+      <div class="field" style="max-width:180px;">
+        <label>下单 / 起始日期</label>
+        <input id="startDate" type="date">
+      </div>
+      <div class="field" style="max-width:200px;">
+        <label>日历规则</label>
+        <select id="mode">
+          <option value="workday">工作日（跳过周末）</option>
+          <option value="natural">自然日（连续）</option>
+        </select>
+      </div>
+    </div>
+    <div class="toolbar" style="margin-top:12px;">
+      <label style="font-size:12px;color:var(--muted);margin:0;">产品模板：</label>
+      <select id="tplSelect" style="width:auto;min-width:200px;"></select>
+      <button class="btn btn-sm" id="loadTpl">加载</button>
+      <button class="btn btn-sm btn-amber" id="saveTpl">存为模板</button>
+      <button class="btn btn-sm" id="delTpl">删除模板</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>生产节点 <span class="tag">可增删 / 拖动排序 / 耗时手动调整 / 负责人到人</span></h2>
+    <div style="overflow-x:auto;">
+    <table id="nodeTable">
+      <thead>
+        <tr>
+          <th class="idx">#</th>
+          <th style="min-width:150px;">节点名称</th>
+          <th style="width:100px;">负责人</th>
+          <th style="width:120px;">类型</th>
+          <th style="width:90px;">耗时(天)</th>
+          <th style="width:150px;">实际到料日期<span style="color:var(--amber);">●</span></th>
+          <th style="width:110px;">计划开始</th>
+          <th style="width:110px;">预计完成</th>
+          <th style="width:150px;">实际完成日期</th>
+          <th style="width:80px;">偏差</th>
+          <th style="width:160px;">备注</th>
+          <th style="width:90px;">操作</th>
+        </tr>
+      </thead>
+      <tbody id="nodeBody"></tbody>
+    </table>
+    </div>
+    <div class="toolbar" style="margin-top:12px;">
+      <button class="btn btn-primary btn-sm" id="addNormal">+ 普通节点</button>
+      <button class="btn btn-amber btn-sm" id="addMs">+ 到料确认里程碑</button>
+    </div>
+    <p class="hint">
+      <b>到料确认里程碑</b>：把「采购物料到料入库」设为里程碑，填<b>实际到料日期</b>后，其后所有节点自动从该日期顺延，成品交货日期实时刷新。<br>
+      耗时支持 <b>0.5 天</b> 步进（如 IQC 0.5、SMT 1.5）。里程碑本身耗时通常填 0。每个节点可填<b>负责人</b>便于追踪到人；<b>实际完成日期</b>仅作记录与预计对比（不影响排期重算），填后自动显示「提前/延期」偏差。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>排期结果</h2>
+    <div class="result">
+      <div>
+        <div class="sub">当前产品预计成品交货日期</div>
+        <div class="big" id="finalDate">—</div>
+      </div>
+      <div>
+        <div class="sub">总工期</div>
+        <div class="big" id="totalDays" style="font-size:22px;">—</div>
+        <div class="sub" id="totalMode"></div>
+      </div>
+      <div class="pill" id="summary">—</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>多产品总览 <span class="tag">点击任意产品可切换当前</span></h2>
+    <div style="overflow-x:auto;">
+      <table class="ov-table">
+        <thead>
+          <tr>
+            <th>产品</th>
+            <th>业务负责人</th>
+            <th>订单数量</th>
+            <th>起始</th>
+            <th>预计交货</th>
+            <th>工期</th>
+            <th>节点数</th>
+          </tr>
+        </thead>
+        <tbody id="overviewBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>时间轴 <span class="tag">甘特视图</span></h2>
+    <div class="gantt-view-switch">
+      <span style="font-size:12px;color:var(--muted);">视图：</span>
+      <button class="btn btn-sm active" id="ganttCurrent">当前产品（节点级）</button>
+      <button class="btn btn-sm" id="ganttAll">全部产品对比</button>
+    </div>
+    <div class="gantt">
+      <div class="gantt-grid" id="gantt">
+        <div class="gantt-axis" id="ganttAxis"></div>
+        <div class="gantt-bars" id="ganttBars"></div>
+      </div>
+    </div>
+    <p class="hint" id="ganttHint"></p>
+  </div>
+
+  <div class="card">
+    <h2>数据 <span class="tag">本地保存 / 导入导出 / 备份恢复</span></h2>
+    <div class="toolbar">
+      <button class="btn btn-sm" id="exportJson">导出配置(JSON)</button>
+      <button class="btn btn-sm" id="importJson">导入配置</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none;">
+      <button class="btn btn-sm" id="exportText">导出排期文本</button>
+      <button class="btn btn-sm btn-green" id="exportExcel">导出 Excel</button>
+      <button class="btn btn-sm" id="reset">重置为默认</button>
+    </div>
+    <div class="sep"></div>
+    <div class="toolbar">
+      <label style="font-size:12px;color:var(--muted);margin:0;">自动备份：</label>
+      <span id="backupInfo" style="font-size:12px;color:var(--muted);"></span>
+      <select id="backupSelect" style="width:auto;min-width:220px;"></select>
+      <button class="btn btn-sm" id="restoreBackup">恢复选中备份</button>
+      <button class="btn btn-sm btn-green" id="manualBackup">立即备份</button>
+    </div>
+    <p class="hint">所有数据自动保存在本浏览器（localStorage），下次打开自动恢复；<b>每次修改都会自动备份（保留最近 20 份）</b>。误删或更新平台后可从备份下拉选历史时间点「恢复」。换设备需导出 JSON 带走。Excel 导出为 .xls（Excel / WPS 可直接打开）。</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+  var DAY = 24*3600*1000;
+  var LS_STATE = "pcba_scheduler_v2";
+  var LS_TPL = "pcba_templates_v1";
+  var LS_BACKUP = "pcba_backups_v1";
+  var MAX_BACKUP = 20;
+  var PALETTE = ["#185FA5","#BA7517","#3B6D11","#A32D2D","#6F42C1","#0E8C8C","#C2410C","#9333EA"];
+  var GANT_VIEW = "current"; // "current" | "all"
+
+  function todayStr(){
+    var d = new Date();
+    return fmt(d);
+  }
+  function fmt(d){
+    var y=d.getFullYear(), m=d.getMonth()+1, day=d.getDate();
+    return y+"-"+(m<10?"0"+m:m)+"-"+(day<10?"0"+day:day);
+  }
+  function parse(s){
+    if(!s) return null;
+    var p = s.split("-");
+    return new Date(+p[0], +p[1]-1, +p[2]);
+  }
+  function isWeekend(d){ var w=d.getDay(); return w===0||w===6; }
+  function startOfDay(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
+  function maxDate(a,b){ return a>b?a:b; }
+  function colorOf(i){ return PALETTE[i % PALETTE.length]; }
+
+  // advance by duration (days, 0.5 granularity) from a date; workday mode skips weekends
+  function advance(start, dur, workday){
+    var n = new Date(start.getTime());
+    var half = Math.round(dur*2); // number of half-days
+    for(var i=0;i<half;i++){
+      n = new Date(n.getTime() + 12*3600*1000);
+      if(workday){
+        while(isWeekend(n)){ n = startOfDay(n); n = new Date(n.getTime()+DAY); }
+      }
+    }
+    return n;
+  }
+
+  var defaultTemplates = {
+    "标准PCBA（含DIP插件）":[
+      {name:"物料采购",type:"normal",duration:10},
+      {name:"到货入库",type:"normal",duration:2},
+      {name:"采购物料到料确认",type:"milestone",duration:0,actual:""},
+      {name:"来料检验 IQC",type:"normal",duration:0.5},
+      {name:"备料发料",type:"normal",duration:0.5},
+      {name:"SMT 贴片",type:"normal",duration:1.5},
+      {name:"DIP 插件",type:"normal",duration:0.5},
+      {name:"测试 ICT/FCT",type:"normal",duration:0.5},
+      {name:"成品检验 FQC",type:"normal",duration:0.5},
+      {name:"包装",type:"normal",duration:0.5},
+      {name:"运输出货",type:"normal",duration:2}
+    ],
+    "全SMT小板":[
+      {name:"物料采购",type:"normal",duration:7},
+      {name:"到货入库",type:"normal",duration:1},
+      {name:"采购物料到料确认",type:"milestone",duration:0,actual:""},
+      {name:"来料检验 IQC",type:"normal",duration:0.5},
+      {name:"备料发料",type:"normal",duration:0.5},
+      {name:"SMT 贴片",type:"normal",duration:1},
+      {name:"测试 FCT",type:"normal",duration:0.5},
+      {name:"成品检验 FQC",type:"normal",duration:0.5},
+      {name:"包装",type:"normal",duration:0.5},
+      {name:"运输出货",type:"normal",duration:1}
+    ],
+    "复杂板（含烧录组装）":[
+      {name:"物料采购",type:"normal",duration:15},
+      {name:"到货入库",type:"normal",duration:2},
+      {name:"采购物料到料确认",type:"milestone",duration:0,actual:""},
+      {name:"来料检验 IQC",type:"normal",duration:0.5},
+      {name:"备料发料",type:"normal",duration:0.5},
+      {name:"SMT 贴片",type:"normal",duration:2},
+      {name:"DIP 插件",type:"normal",duration:1},
+      {name:"测试 ICT/FCT",type:"normal",duration:1},
+      {name:"软件烧录",type:"normal",duration:0.5},
+      {name:"组装",type:"normal",duration:0.5},
+      {name:"成品检验 FQC",type:"normal",duration:0.5},
+      {name:"包装",type:"normal",duration:0.5},
+      {name:"运输出货",type:"normal",duration:3}
+    ]
+  };
+
+  function loadTemplates(){
+    var raw = localStorage.getItem(LS_TPL);
+    var t = {};
+    if(raw){ try{ t = JSON.parse(raw); }catch(e){ t={}; } }
+    for(var k in defaultTemplates){ if(!(k in t)) t[k]=defaultTemplates[k]; }
+    return t;
+  }
+  function saveTemplates(t){ localStorage.setItem(LS_TPL, JSON.stringify(t)); }
+
+  var uid = 1;
+  function nextId(){ return Date.now()+ (uid++); }
+
+  function nodesFromTpl(tpl){
+    return tpl.map(function(n,i){
+      return {id:i+1, name:n.name, type:n.type, duration:n.duration, actual:n.actual||"", actualDone:"", remark:"", owner:""};
+    });
+  }
+
+  // ---- normalization: fill missing fields so old/partial data always works ----
+  function normalizeNode(n){
+    n = n || {};
+    return {
+      id: (n.id!==undefined && n.id!==null) ? n.id : nextId(),
+      name: n.name || "节点",
+      type: n.type==="milestone" ? "milestone" : "normal",
+      duration: (typeof n.duration==="number") ? n.duration : (parseFloat(n.duration)||0),
+      actual: n.actual || "",
+      actualDone: n.actualDone || "",
+      remark: n.remark || "",
+      owner: n.owner || ""
+    };
+  }
+  function normalizeProduct(p){
+    p = p || {};
+    return {
+      id: (p.id!==undefined && p.id!==null) ? p.id : nextId(),
+      name: p.name || p.product || "未命名产品",
+      owner: p.owner || "",
+      qty: (p.qty!==undefined && p.qty!==null && p.qty!=="") ? p.qty : "",
+      startDate: p.startDate || todayStr(),
+      mode: p.mode==="natural" ? "natural" : "workday",
+      nodes: (p.nodes || []).map(normalizeNode)
+    };
+  }
+
+  function defaultProducts(){
+    return [{
+      id: nextId(),
+      name:"标准PCBA（含DIP插件）",
+      owner:"",
+      qty:"",
+      startDate: todayStr(),
+      mode:"workday",
+      nodes: nodesFromTpl(defaultTemplates["标准PCBA（含DIP插件）"])
+    }];
+  }
+
+  function loadProducts(){
+    var raw = localStorage.getItem(LS_STATE);
+    if(raw){ try{
+      var s = JSON.parse(raw);
+      if(Array.isArray(s) && s.length){ return s.map(normalizeProduct); }
+      if(s && (s.nodes || s.product)){ return [normalizeProduct(s)]; }
+    }catch(e){} }
+    return defaultProducts();
+  }
+  function saveProducts(){
+    localStorage.setItem(LS_STATE, JSON.stringify(products));
+    backupNow(false);
+  }
+
+  var products = loadProducts();
+  var activeId = products[0].id;
+
+  function activeIndex(){ for(var i=0;i<products.length;i++){ if(products[i].id===activeId) return i; } return 0; }
+  function active(){ return products[activeIndex()]; }
+
+  // ---- backups ----
+  function loadBackups(){
+    var raw = localStorage.getItem(LS_BACKUP);
+    var a=[]; if(raw){ try{ a=JSON.parse(raw); }catch(e){} }
+    return Array.isArray(a)?a:[];
+  }
+  function saveBackups(a){ localStorage.setItem(LS_BACKUP, JSON.stringify(a)); }
+  var lastBackupJSON="";
+  function backupNow(force){
+    var cur = JSON.stringify(products);
+    if(!force && cur===lastBackupJSON) return; // 无变化不重复备份
+    lastBackupJSON = cur;
+    var a = loadBackups();
+    a.push({ t: Date.now(), activeId: activeId, data: JSON.parse(cur) });
+    if(a.length>MAX_BACKUP) a = a.slice(a.length-MAX_BACKUP);
+    saveBackups(a);
+    updateBackupUI();
+  }
+  function updateBackupUI(){
+    var a = loadBackups();
+    var sel = document.getElementById("backupSelect");
+    if(!sel) return;
+    sel.innerHTML="";
+    if(!a.length){
+      var o=document.createElement("option"); o.textContent="暂无备份"; sel.appendChild(o);
+    }
+    a.slice().reverse().forEach(function(b){
+      var o=document.createElement("option"); o.value=b.t;
+      o.textContent = fmt(new Date(b.t))+" "+new Date(b.t).toLocaleTimeString()+"（"+(b.data?b.data.length:0)+"个产品）";
+      sel.appendChild(o);
+    });
+    document.getElementById("backupInfo").textContent =
+      a.length ? ("共 "+a.length+" 份，最新："+fmt(new Date(a[a.length-1].t))+" "+new Date(a[a.length-1].t).toLocaleTimeString())
+               : "尚无";
+  }
+
+  // ---- compute schedule for one product ----
+  function compute(prod){
+    var start = parse(prod.startDate) || new Date();
+    var workday = prod.mode === "workday";
+    var cursor = new Date(start.getTime());
+    var rows = [];
+    prod.nodes.forEach(function(nd){
+      if(nd.type==="milestone" && nd.actual){
+        var ad = parse(nd.actual);
+        if(ad) cursor = maxDate(cursor, ad);
+      }
+      var s = new Date(cursor.getTime());
+      var e = advance(cursor, nd.duration, workday);
+      rows.push({name:nd.name,type:nd.type,start:s,end:e,duration:nd.duration,owner:nd.owner||""});
+      cursor = new Date(e.getTime());
+    });
+    return {start:start, rows:rows, final:cursor};
+  }
+
+  function escapeAttr(s){ return (s==null?"":String(s)).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+  function escHtml(s){ return (s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  // ---- render ----
+  function render(){
+    var cur = active();
+    document.getElementById("product").value = cur.name||"";
+    document.getElementById("owner").value = cur.owner||"";
+    document.getElementById("qty").value = (cur.qty===undefined?"":cur.qty);
+    document.getElementById("startDate").value = cur.startDate||"";
+    document.getElementById("mode").value = cur.mode||"workday";
+
+    var body = document.getElementById("nodeBody");
+    body.innerHTML = "";
+    cur.nodes.forEach(function(nd,idx){
+      var tr = document.createElement("tr");
+      var isMs = nd.type==="milestone";
+      tr.innerHTML =
+        '<td class="idx">'+(idx+1)+'</td>'+
+        '<td><input data-i="'+idx+'" data-k="name" type="text" value="'+escapeAttr(nd.name)+'"></td>'+
+        '<td><input data-i="'+idx+'" data-k="owner" type="text" placeholder="负责人" value="'+escapeAttr(nd.owner||"")+'"></td>'+
+        '<td><select data-i="'+idx+'" data-k="type">'+
+          '<option value="normal"'+(!isMs?" selected":"")+'>普通节点</option>'+
+          '<option value="milestone"'+(isMs?" selected":"")+'>到料确认里程碑</option>'+
+        '</select></td>'+
+        '<td><input data-i="'+idx+'" data-k="duration" type="number" min="0" step="0.5" value="'+nd.duration+'"></td>'+
+        '<td>'+(isMs
+          ? '<input data-i="'+idx+'" data-k="actual" type="date" value="'+nd.actual+'">'
+          : '<span style="color:var(--muted);">—</span>')+'</td>'+
+        '<td class="calc" data-start="'+idx+'">—</td>'+
+        '<td class="calc" data-end="'+idx+'">—</td>'+
+        '<td><input data-i="'+idx+'" data-k="actualDone" type="date" value="'+nd.actualDone+'"></td>'+
+        '<td class="calc diff-ontime" data-diff="'+idx+'">—</td>'+
+        '<td><input data-i="'+idx+'" data-k="remark" type="text" placeholder="备注" value="'+escapeAttr(nd.remark||"")+'"></td>'+
+        '<td><div class="op">'+
+          '<button class="up" data-i="'+idx+'" title="上移">↑</button>'+
+          '<button class="down" data-i="'+idx+'" title="下移">↓</button>'+
+          '<button class="del" data-i="'+idx+'" title="删除">✕</button>'+
+        '</div></td>';
+      body.appendChild(tr);
+    });
+
+    updateComputed();
+  }
+
+  // update only the calculated cells + result + overview + gantt (does NOT rebuild inputs, keeps focus)
+  function updateComputed(){
+    var cur = active();
+    var res = compute(cur);
+    var body = document.getElementById("nodeBody");
+    res.rows.forEach(function(r,idx){
+      var sc = body.querySelector('[data-start="'+idx+'"]');
+      var ec = body.querySelector('[data-end="'+idx+'"]');
+      if(sc) sc.textContent = fmt(r.start);
+      if(ec) ec.textContent = fmt(r.end);
+      var nd = cur.nodes[idx];
+      var dc = body.querySelector('[data-diff="'+idx+'"]');
+      if(dc){
+        if(nd.actualDone){
+          var ad = parse(nd.actualDone);
+          var diff = Math.round((ad - r.end)/DAY*10)/10;
+          if(diff>0){ dc.className="calc diff-late"; dc.textContent="延期 "+diff+"天"; }
+          else if(diff<0){ dc.className="calc diff-early"; dc.textContent="提前 "+(-diff)+"天"; }
+          else { dc.className="calc diff-ontime"; dc.textContent="准点"; }
+        } else { dc.className="calc diff-ontime"; dc.textContent="—"; }
+      }
+    });
+
+    document.getElementById("finalDate").textContent = fmt(res.final);
+    var spanDays = Math.round((res.final - res.start)/DAY*10)/10;
+    var spanLabel = cur.mode==="workday" ? "工作日(含周末跳过)" : "自然日(连续)";
+    document.getElementById("totalDays").textContent = spanDays + " 天";
+    document.getElementById("totalMode").textContent = spanLabel;
+    document.getElementById("summary").textContent =
+      cur.name + " · " + cur.nodes.length + " 个节点 · 订单 " + (cur.qty||"—") + " · 起于 " + fmt(res.start);
+
+    renderOverview();
+    renderGantt();
+  }
+
+  function renderOverview(){
+    var tb = document.getElementById("overviewBody");
+    tb.innerHTML = "";
+    products.forEach(function(p,pi){
+      var r = compute(p);
+      var span = Math.round((r.final - r.start)/DAY*10)/10;
+      var tr = document.createElement("tr");
+      if(p.id===activeId) tr.className = "active";
+      tr.innerHTML =
+        '<td><span class="swatch" style="background:'+colorOf(pi)+'"></span>'+escapeAttr(p.name||"未命名")+'</td>'+
+        '<td>'+(p.owner?escapeAttr(p.owner):'<span style="color:var(--muted);">—</span>')+'</td>'+
+        '<td>'+(p.qty?escapeAttr(p.qty):'<span style="color:var(--muted);">—</span>')+'</td>'+
+        '<td>'+fmt(r.start)+'</td>'+
+        '<td style="font-weight:600;color:var(--blue);">'+fmt(r.final)+'</td>'+
+        '<td>'+span+' 天</td>'+
+        '<td>'+p.nodes.length+'</td>';
+      tr.onclick = function(){
+        activeId = p.id; saveProducts(); refreshProductSelect(); render();
+        toast("已切换到："+(p.name||""));
+      };
+      tb.appendChild(tr);
+    });
+  }
+
+  function renderGantt(){
+    var axis = document.getElementById("ganttAxis");
+    var bars = document.getElementById("ganttBars");
+    axis.innerHTML=""; bars.innerHTML="";
+    var list = (GANT_VIEW==="all") ? products : [active()];
+    var comps = list.map(function(p){ return {p:p, r:compute(p)}; });
+    if(!comps.length) return;
+
+    var start = comps.reduce(function(m,c){ var s=startOfDay(c.r.start); return m<s?s:m; }, new Date(8640000000000000));
+    var end = comps.reduce(function(m,c){ var e=startOfDay(c.r.final); return m>e?e:m; }, new Date(-8640000000000000));
+    var total = Math.max(1, Math.round((end-start)/DAY))+1;
+    var pctPerDay = 100/total;
+
+    var step = total>40?7:(total>20?5:(total>10?3:2));
+    for(var d=0; d<=total; d+=step){
+      var t = document.createElement("div");
+      t.className="gantt-tick";
+      t.style.left = (d*pctPerDay)+"%";
+      var dt = new Date(start.getTime()+d*DAY);
+      t.textContent = (dt.getMonth()+1)+"/"+dt.getDate();
+      axis.appendChild(t);
+    }
+
+    comps.forEach(function(c,pi){
+      var color = colorOf(pi);
+      if(GANT_VIEW==="all"){
+        // one swimlane per product: a translucent band + milestone markers
+        var row = document.createElement("div");
+        row.className="gbar-row";
+        var label = document.createElement("div");
+        label.className="gbar-label";
+        label.innerHTML = '<span class="swatch" style="background:'+color+'"></span>'+escapeAttr(c.p.name||"未命名")+
+          (c.p.owner?'（'+escapeAttr(c.p.owner)+'）':'');
+        row.appendChild(label);
+
+        var sd = Math.round((startOfDay(c.r.start)-start)/DAY);
+        var ed = Math.round((startOfDay(c.r.final)-start)/DAY);
+        var band = document.createElement("div");
+        band.className="gbar";
+        band.style.background = color;
+        band.style.opacity = "0.32";
+        band.style.left = (sd*pctPerDay)+"%";
+        band.style.width = Math.max(0.8,(ed-sd)*pctPerDay)+"%";
+        band.title = (c.p.name||"")+" · 业务负责人："+(c.p.owner||"—")+(c.p.qty?(" · 订单："+c.p.qty):"")+" · 交货 "+fmt(c.r.final);
+        row.appendChild(band);
+
+        c.p.nodes.forEach(function(nd,ni){
+          if(nd.type==="milestone"){
+            var msd = startOfDay(c.r.rows[ni].start);
+            var mpos = Math.round((msd-start)/DAY);
+            var tri = document.createElement("div");
+            tri.className="gbar ms";
+            tri.style.background = color;
+            tri.style.left = (mpos*pctPerDay)+"%";
+            tri.title = (nd.name||"")+": "+fmt(msd)+(nd.owner?" · "+nd.owner:"");
+            row.appendChild(tri);
+          }
+        });
+        bars.appendChild(row);
+      } else {
+        // current product: node-level rows
+        c.r.rows.forEach(function(r,ri){
+          var row = document.createElement("div");
+          row.className="gbar-row";
+          var label = document.createElement("div");
+          label.className="gbar-label";
+          var done = c.p.nodes[ri] && c.p.nodes[ri].actualDone;
+          label.textContent = r.name + (r.owner?(" · "+r.owner):"") + (done?" ✓":"");
+          row.appendChild(label);
+          var sd = Math.round((startOfDay(r.start)-start)/DAY);
+          var ed = Math.round((startOfDay(r.end)-start)/DAY);
+          var bar = document.createElement("div");
+          var doneCls = (r.type!=="milestone" && done) ? " done" : "";
+          bar.className = "gbar " + (r.type==="milestone"?"ms":"normal") + doneCls;
+          bar.style.left = (sd*pctPerDay)+"%";
+          bar.style.width = Math.max(0.8,(ed-sd)*pctPerDay)+"%";
+          if(done) bar.title = "实际完成：" + done;
+          row.appendChild(bar);
+          bars.appendChild(row);
+        });
+      }
+    });
+
+    document.getElementById("ganttHint").innerHTML = (GANT_VIEW==="all")
+      ? "全部产品并排对比：每条泳道代表一个产品（色带=总工期，<span style='color:var(--amber)'>◆</span>=到料里程碑）。横向重叠区即排期冲突/并行时段。"
+      : "当前产品节点级甘特：每个节点一条，标签含负责人。切到「全部产品对比」可看多产品交期重叠。";
+  }
+
+  // ---- product management ----
+  function refreshProductSelect(){
+    var sel = document.getElementById("productSelect");
+    sel.innerHTML="";
+    products.forEach(function(p,idx){
+      var o=document.createElement("option");
+      o.value=p.id;
+      o.textContent = (idx+1)+". "+(p.name||"未命名")+(p.owner?"（"+p.owner+"）":"");
+      sel.appendChild(o);
+    });
+    sel.value = activeId;
+  }
+
+  document.getElementById("productSelect").addEventListener("change", function(e){
+    activeId = e.target.value; saveProducts(); render();
+  });
+  document.getElementById("addProduct").onclick = function(){
+    var tpl = defaultTemplates["标准PCBA（含DIP插件）"];
+    var p = {
+      id: nextId(),
+      name: "新产品 "+(products.length+1),
+      owner: "",
+      qty: "",
+      startDate: todayStr(),
+      mode: "workday",
+      nodes: nodesFromTpl(tpl)
+    };
+    products.push(p); activeId = p.id; saveProducts(); refreshProductSelect(); render();
+    toast("已新增产品："+p.name);
+  };
+  document.getElementById("renameProduct").onclick = function(){
+    var name = prompt("产品名称：", active().name||"");
+    if(!name) return;
+    active().name = name; saveProducts(); refreshProductSelect(); render(); toast("已重命名");
+  };
+  document.getElementById("delProduct").onclick = function(){
+    if(products.length<=1){ toast("至少保留一个产品"); return; }
+    if(!confirm("删除当前产品「"+(active().name||"")+"」？其排期将一并删除。")) return;
+    var idx = activeIndex();
+    products.splice(idx,1);
+    activeId = products[Math.max(0,idx-1)].id;
+    saveProducts(); refreshProductSelect(); render(); toast("已删除");
+  };
+
+  document.getElementById("product").addEventListener("input",function(e){ active().name=e.target.value; saveProducts(); refreshProductSelect(); renderOverview(); });
+  document.getElementById("owner").addEventListener("input",function(e){ active().owner=e.target.value; saveProducts(); renderOverview(); refreshProductSelect(); renderGantt(); });
+  document.getElementById("qty").addEventListener("input",function(e){ active().qty=e.target.value; saveProducts(); renderOverview(); });
+  document.getElementById("startDate").addEventListener("change",function(e){ active().startDate=e.target.value; saveProducts(); render(); });
+  document.getElementById("mode").addEventListener("change",function(e){ active().mode=e.target.value; saveProducts(); render(); });
+
+  // ---- node events ----
+  // text inputs: update data only, DO NOT rebuild the table (keeps IME composition / focus)
+  document.getElementById("nodeBody").addEventListener("input", function(e){
+    var t = e.target;
+    var i = t.getAttribute("data-i");
+    var k = t.getAttribute("data-k");
+    if(i===null||k===null) return;
+    i = +i;
+    var nd = active().nodes[i];
+    if(k==="duration"){ nd.duration = parseFloat(t.value)||0; saveProducts(); updateComputed(); }
+    else if(k==="name"){ nd.name = t.value; saveProducts(); refreshProductSelect(); renderOverview(); }
+    else if(k==="owner"){ nd.owner = t.value; saveProducts(); refreshProductSelect(); renderOverview(); renderGantt(); }
+    else if(k==="remark"){ nd.remark = t.value; saveProducts(); }
+    else { nd[k] = t.value; saveProducts(); }
+  });
+  // date / type changes: structural or compute-affecting
+  document.getElementById("nodeBody").addEventListener("change", function(e){
+    var t=e.target; var i=t.getAttribute("data-i"); var k=t.getAttribute("data-k");
+    if(i===null||k===null) return;
+    i=+i;
+    var nd=active().nodes[i];
+    if(k==="type"){
+      nd.type = t.value;
+      if(t.value==="milestone" && !nd.actual) nd.actual="";
+      saveProducts(); render();
+    } else if(k==="actual"){
+      nd.actual = t.value; saveProducts(); updateComputed();
+    } else if(k==="actualDone"){
+      nd.actualDone = t.value; saveProducts(); updateComputed();
+    } else if(k==="duration"){
+      nd.duration = parseFloat(t.value)||0; saveProducts(); updateComputed();
+    }
+  });
+  document.getElementById("nodeBody").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    var i = +b.getAttribute("data-i");
+    var nodes = active().nodes;
+    if(b.classList.contains("del")){
+      nodes.splice(i,1);
+    } else if(b.classList.contains("up") && i>0){
+      var tmp=nodes[i-1]; nodes[i-1]=nodes[i]; nodes[i]=tmp;
+    } else if(b.classList.contains("down") && i<nodes.length-1){
+      var tmp2=nodes[i+1]; nodes[i+1]=nodes[i]; nodes[i]=tmp2;
+    } else { return; }
+    saveProducts(); render();
+  });
+
+  document.getElementById("addNormal").onclick = function(){
+    active().nodes.push({id:nextId(),name:"新节点",type:"normal",duration:1,actual:"",actualDone:"",remark:"",owner:""});
+    saveProducts(); render();
+  };
+  document.getElementById("addMs").onclick = function(){
+    active().nodes.push({id:nextId(),name:"到料确认里程碑",type:"milestone",duration:0,actual:"",actualDone:"",remark:"",owner:""});
+    saveProducts(); render();
+  };
+
+  // ---- templates ----
+  function refreshTplSelect(){
+    var sel = document.getElementById("tplSelect");
+    var t = loadTemplates();
+    sel.innerHTML="";
+    Object.keys(t).forEach(function(k){
+      var o=document.createElement("option"); o.value=k; o.textContent=k; sel.appendChild(o);
+    });
+  }
+  document.getElementById("loadTpl").onclick = function(){
+    var name = document.getElementById("tplSelect").value;
+    var t = loadTemplates();
+    if(!t[name]) return;
+    active().nodes = nodesFromTpl(t[name]);
+    active().name = name;
+    saveProducts(); refreshProductSelect(); render(); toast("已加载模板："+name);
+  };
+  document.getElementById("saveTpl").onclick = function(){
+    var name = prompt("模板名称：", active().name||"我的产品");
+    if(!name) return;
+    var t = loadTemplates();
+    t[name] = active().nodes.map(function(n){ return {name:n.name,type:n.type,duration:n.duration,actual:n.actual||"",actualDone:n.actualDone||"",remark:n.remark||"",owner:n.owner||""}; });
+    saveTemplates(t); refreshTplSelect();
+    document.getElementById("tplSelect").value = name;
+    toast("已保存模板："+name);
+  };
+  document.getElementById("delTpl").onclick = function(){
+    var name = document.getElementById("tplSelect").value;
+    var t = loadTemplates();
+    if(!(name in t)) return;
+    if(!confirm("删除模板「"+name+"」？")) return;
+    delete t[name]; saveTemplates(t); refreshTplSelect(); toast("已删除模板："+name);
+  };
+
+  // ---- gantt view switch ----
+  document.getElementById("ganttCurrent").onclick = function(){
+    GANT_VIEW="current"; this.classList.add("active");
+    document.getElementById("ganttAll").classList.remove("active"); renderGantt();
+  };
+  document.getElementById("ganttAll").onclick = function(){
+    GANT_VIEW="all"; this.classList.add("active");
+    document.getElementById("ganttCurrent").classList.remove("active"); renderGantt();
+  };
+
+  // ---- data ops ----
+  document.getElementById("exportJson").onclick = function(){
+    var blob = new Blob([JSON.stringify(products,null,2)],{type:"application/json"});
+    download(blob, "PCBA多产品排期.json");
+  };
+  document.getElementById("importJson").onclick = function(){ document.getElementById("fileInput").click(); };
+  document.getElementById("fileInput").addEventListener("change",function(e){
+    var f=e.target.files[0]; if(!f) return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      try{
+        var s=JSON.parse(rd.result);
+        var arr;
+        if(Array.isArray(s)) arr=s;
+        else if(s && s.products) arr=s.products;
+        else if(s && (s.nodes||s.product)) arr=[s];
+        else throw 0;
+        arr = arr.map(normalizeProduct);
+        products=arr; activeId=products[0].id;
+        saveProducts(); refreshProductSelect(); render(); toast("导入成功");
+      }catch(err){ toast("导入失败：文件格式不正确"); }
+    };
+    rd.readAsText(f); e.target.value="";
+  });
+
+  // 导出 Excel（.xls，Excel / WPS 可直接打开，纯本地无依赖）
+  document.getElementById("exportExcel").onclick = function(){
+    var tables = [];
+    // 总览表
+    var ov = '<table border="1" cellspacing="0"><tr style="background:#E6F1FB;font-weight:bold">'+
+      '<td>产品</td><td>业务负责人</td><td>订单数量</td><td>起始日期</td><td>预计交货日期</td><td>总工期(天)</td><td>节点数</td></tr>';
+    products.forEach(function(p){
+      var r=compute(p);
+      var span=Math.round((r.final-r.start)/DAY*10)/10;
+      ov+='<tr><td>'+escHtml(p.name)+'</td><td>'+escHtml(p.owner||"")+'</td><td>'+escHtml(p.qty||"")+'</td><td>'+fmt(r.start)+'</td><td>'+fmt(r.final)+'</td><td>'+span+'</td><td>'+p.nodes.length+'</td></tr>';
+    });
+    ov+='</table><br>';
+    // 节点明细表
+    var dt='<table border="1" cellspacing="0"><tr style="background:#E6F1FB;font-weight:bold">'+
+      '<td>产品</td><td>业务负责人</td><td>订单数量</td><td>节点名称</td><td>负责人</td><td>类型</td>'+
+      '<td>耗时(天)</td><td>实际到料日期</td><td>计划开始</td><td>预计完成</td><td>实际完成日期</td><td>偏差</td><td>备注</td></tr>';
+    products.forEach(function(p){
+      var r=compute(p);
+      r.rows.forEach(function(rw,i){
+        var n=p.nodes[i];
+        var diffTxt="";
+        if(n.actualDone){ var ad=parse(n.actualDone); var d=Math.round((ad-rw.end)/DAY*10)/10;
+          diffTxt = d>0?("延期 "+d+"天"):(d<0?("提前 "+(-d)+"天"):"准点"); }
+        dt+='<tr><td>'+escHtml(p.name)+'</td><td>'+escHtml(p.owner||"")+'</td><td>'+escHtml(p.qty||"")+
+          '</td><td>'+escHtml(rw.name)+'</td><td>'+escHtml(n.owner||"")+'</td><td>'+(rw.type==="milestone"?"到料确认里程碑":"普通节点")+
+          '</td><td>'+rw.duration+'</td><td>'+(n.actual||"")+'</td><td>'+fmt(rw.start)+'</td><td>'+fmt(rw.end)+'</td><td>'+(n.actualDone||"")+
+          '</td><td>'+diffTxt+'</td><td>'+escHtml(n.remark||"")+'</td></tr>';
+      });
+    });
+    dt+='</table>';
+    var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">'+
+      '<head><meta charset="UTF-8"><title>PCBA 多产品排期</title></head><body>'+
+      '<h3>PCBA 多产品生产排期表（导出 '+fmt(new Date())+'）</h3>'+ov+dt+'</body></html>';
+    var blob=new Blob(["\ufeff"+html],{type:"application/vnd.ms-excel;charset=utf-8"});
+    download(blob,"PCBA多产品排期.xls");
+    toast("已导出 Excel（.xls）");
+  };
+
+  document.getElementById("exportText").onclick = function(){
+    var lines=[];
+    lines.push("PCBA 多产品生产排期表");
+    lines.push("导出时间："+fmt(new Date()));
+    lines.push("================================");
+    products.forEach(function(p,pi){
+      var r=compute(p);
+      lines.push("");
+      lines.push("【"+(pi+1)+"】"+(p.name||"未命名")+"  业务负责人："+(p.owner||"—")+(p.qty?("  订单数量："+p.qty):""));
+      lines.push("起始日期："+fmt(r.start)+"（"+(p.mode==="workday"?"工作日":"自然日")+"）");
+      r.rows.forEach(function(rw,i){
+        var n=p.nodes[i];
+        lines.push("  "+(i+1)+". "+rw.name+"  ["+(rw.type==="milestone"?"到料里程碑":"普通")+"]"+(rw.owner?" @"+rw.owner:"")+(n.remark?" ("+n.remark+")":""));
+        lines.push("      计划："+fmt(rw.start)+" → "+fmt(rw.end)+"  ("+rw.duration+"天)"+(n.actualDone?("  实际完成："+n.actualDone):""));
+      });
+      var span=Math.round((r.final-r.start)/DAY*10)/10;
+      lines.push("  >> 预计成品交货日期："+fmt(r.final)+"  总工期："+span+" 天");
+    });
+    var blob=new Blob([lines.join("\n")],{type:"text/plain"});
+    download(blob,"PCBA多产品排期.txt");
+  };
+  document.getElementById("reset").onclick = function(){
+    if(!confirm("重置为默认（仅保留一个标准产品）？当前所有产品与修改将丢失（仍可从备份恢复）。")) return;
+    products=defaultProducts(); activeId=products[0].id;
+    saveProducts(); refreshProductSelect(); render(); toast("已重置");
+  };
+
+  // ---- backup / restore ----
+  document.getElementById("restoreBackup").onclick = function(){
+    var sel=document.getElementById("backupSelect");
+    var ts=sel.value;
+    if(!ts || sel.options.length===0 || sel.options[0].textContent==="暂无备份"){ toast("没有可恢复的备份"); return; }
+    var a=loadBackups();
+    var b=null;
+    for(var i=0;i<a.length;i++){ if(String(a[i].t)===String(ts)){ b=a[i]; break; } }
+    if(!b){ toast("备份不存在"); return; }
+    if(!confirm("恢复到 "+fmt(new Date(b.t))+" 的备份？当前未备份的数据将被覆盖（可再次恢复回来）。")) return;
+    // 先备份当前状态，便于反悔
+    backupNow(true);
+    var restored = b.data.map(normalizeProduct);
+    products = restored;
+    activeId = (b.activeId!==undefined && restored.some(function(p){return p.id===b.activeId;})) ? b.activeId : restored[0].id;
+    saveProducts(); refreshProductSelect(); render();
+    toast("已恢复备份："+fmt(new Date(b.t)));
+  };
+  document.getElementById("manualBackup").onclick = function(){
+    backupNow(true); toast("已立即备份");
+  };
+
+  function download(blob, filename){
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement("a"); a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  }
+
+  var toastTimer=null;
+  function toast(msg){
+    var el=document.getElementById("toast"); el.textContent=msg; el.classList.add("show");
+    clearTimeout(toastTimer); toastTimer=setTimeout(function(){el.classList.remove("show");},1800);
+  }
+
+  // 每 5 分钟自动备份一次（仅数据变化时落盘）
+  setInterval(function(){ backupNow(false); }, 5*60*1000);
+
+  // init
+  refreshProductSelect();
+  refreshTplSelect();
+  updateBackupUI();
+  render();
+})();
+</script>
+</body>
+</html>
